@@ -70,18 +70,25 @@ heading("2. Python version")
 version = sys.version_info
 shown = str(version.major) + "." + str(version.minor) + "." + str(version.micro)
 
-if version.major == 3 and version.minor in (11, 12):
-    ok("Python " + shown + " - this is the sweet spot.")
-elif version.major == 3 and version.minor == 10:
-    warn("Python " + shown + " - should work, but 3.11 or 3.12 is safer.",
-         ["The talking library has fewer problems on 3.11 / 3.12."])
-elif version.major == 3 and version.minor >= 13:
-    bad("Python " + shown + " is TOO NEW.",
-        ["Several voice libraries break on 3.13 and 3.14.",
-         "Install Python 3.11 or 3.12 from https://www.python.org/downloads/",
-         "Tick 'Add python.exe to PATH' during install."])
+if version.major != 3:
+    bad("This is Python " + shown + ", not Python 3.",
+        ["Install Python 3 from https://www.python.org/downloads/"])
+elif version.minor in (11, 12, 13, 14):
+    ok("Python " + shown + " - good.")
+    if version.minor >= 13:
+        print("            Note: 3.13 and 3.14 are very new, so a library could")
+        print("            still lag behind. Every package this app needs already")
+        print("            ships a 3.14 wheel, so you should be fine.")
+        print("            If one ever fails to install, install Python 3.12")
+        print("            ALONGSIDE this one (do not uninstall 3.14) and then")
+        print("            run everything with:   py -3.12 main.py")
+elif version.minor == 10:
+    warn("Python " + shown + " - works, but 3.11 or newer is better.",
+         ["Upgrade from https://www.python.org/downloads/ if you can."])
 else:
-    bad("Python " + shown + " is too old.", ["Install Python 3.11 or 3.12."])
+    bad("Python " + shown + " is too old.",
+        ["Install Python 3.11 or newer from https://www.python.org/downloads/",
+         "Tick 'Add python.exe to PATH' during install."])
 
 
 # ------------------------------------------------------------

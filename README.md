@@ -35,14 +35,60 @@ No error messages when the internet dies. It just changes brain and keeps going.
 
 ## 🚀 SETUP — follow these in order
 
-### Step 1 — Install Python 3.11 or 3.12
+### Step 0 — Get the code onto your laptop
 
-Download from <https://www.python.org/downloads/windows/>
+⚠️ **Read this or you will end up with an empty folder.**
 
-> ⚠️ **Do NOT use Python 3.13 or 3.14.** The voice libraries break on them.
-> 3.11 and 3.12 are the safe ones.
+The code currently lives on a **branch**, not on `main`. If you run a plain
+`git clone`, you will download *only the README* and wonder where everything went.
 
-During installation, **tick the box that says "Add python.exe to PATH"**. If you forget, nothing will work and the error will be confusing.
+Open a terminal in the place you want the project (for example `C:\Users\akach`)
+and run this **exact** command, which asks for the right branch:
+
+```
+git clone -b arena/01a09bd2-torexassist https://github.com/Tor3x-Coder/TorexAssist.git
+```
+
+Then move into it:
+
+```
+cd TorexAssist
+dir
+```
+
+You should see `main.py`, `ears.py`, `brain.py`, `commands.py`, `speaker.py`
+and the rest. If you only see `README.md`, the `-b` part was missing — delete
+the folder and run the clone command again with `-b`.
+
+> **Don't use git / prefer clicking?** On the GitHub page, switch the branch
+> dropdown to `arena/01a09bd2-torexassist`, then **Code → Download ZIP**, and
+> unzip it. Same result.
+
+---
+
+### Step 1 — Check your Python
+
+Open a terminal (`Win` key → type `cmd` → Enter) and run:
+
+```
+python --version
+```
+
+You want **Python 3.11, 3.12, 3.13 or 3.14**. All of them work — every library
+this app needs already ships a wheel for 3.14, so you do **not** need to
+downgrade or reinstall anything.
+
+> This app deliberately avoids `pyttsx3` and `audioop`, which are the two things
+> that normally break on newer Python. That is why 3.14 is fine here.
+
+If you have no Python at all, or it is older than 3.11: install it from
+<https://www.python.org/downloads/> and **tick the box that says
+"Add python.exe to PATH"**. If you forget that box, nothing works and the
+error messages are confusing.
+
+> 🛟 **If one library ever refuses to install on 3.14:** install Python 3.12
+> *alongside* it (do not uninstall 3.14 — Windows happily keeps both), then run
+> everything with `py -3.12` instead of `python`.
 
 ### Step 2 — Install Ollama + the offline model
 
