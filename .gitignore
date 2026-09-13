@@ -1,0 +1,26 @@
+# ============================================================
+#  .gitignore  -  files git should NEVER upload
+# ============================================================
+
+# THE MOST IMPORTANT ONE.
+# Your config.ini holds your secret Gemini API key.
+# If you upload it, strangers can use your key and your quota dies.
+#
+# We keep the blank template (config.example.ini) in git instead.
+# When you set the app up you copy the template and rename it.
+config.ini
+
+# The Vosk model is 40 MB of other people's files. No point uploading it.
+models/*
+!models/README.txt
+
+# Python's own junk
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Our own log file
+*.log
