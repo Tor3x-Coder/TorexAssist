@@ -1,0 +1,30 @@
+# ============================================================
+#  requirements.txt  -  the libraries TorexAssist needs
+# ============================================================
+#  Install them all at once with:
+#
+#       pip install -r requirements.txt
+#
+#  If one of them refuses to install, install them one by one so you
+#  can see which one is the problem.
+# ============================================================
+
+# THE EARS - offline speech recognition (the microphone -> words)
+vosk
+
+# MICROPHONE - opens your sound device
+sounddevice
+
+# THE VOICE - talks to the voice built into Windows
+# (this package provides win32com and win32api)
+pywin32
+
+# INTERNET - used for Gemini, Ollama, the weather and the online check
+requests
+
+# LAPTOP INFO - battery level, memory, CPU
+psutil
+
+# THE CLOUD BRAIN - Google Gemini
+# Optional. The app still runs without it, using Ollama only.
+google-genai
