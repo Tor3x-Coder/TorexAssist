@@ -82,6 +82,12 @@ def read_section(section):
 # About you
 USER_NAME = read_setting("USER", "name", "Torex")
 
+# The PRODUCT's name. One line drives everything: the window title,
+# the startup banner, the voice prefix, and how the brain introduces
+# itself. When the real name is chosen, change it here - zero code.
+# (And if you want the wake word to follow it: wake_word = hey <name>.)
+APP_NAME = read_setting("APP", "name", "TorexAssist")
+
 # THE wake word. Single, and config-driven: once the product gets a
 # name, this becomes "hey <app-name>" with zero code changes.
 WAKE_WORD = read_setting("USER", "wake_word", "hey buddy").lower()

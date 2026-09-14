@@ -202,16 +202,16 @@ def follow_up_conversation():
 #  THE MAIN PROGRAM
 # ------------------------------------------------------------
 def main():
-    # A nicer window title
+    # A nicer window title (follows the product name in config.ini)
     try:
         if sys.platform == "win32":
             import ctypes
-            ctypes.windll.kernel32.SetConsoleTitleW("TorexAssist")
+            ctypes.windll.kernel32.SetConsoleTitleW(config.APP_NAME)
     except Exception:
         pass
 
     print("=" * 64)
-    print("   T O R E X   A S S I S T")
+    print("   " + " ".join(config.APP_NAME.upper()))
     print("=" * 64)
     print("  Wake word  : " + config.WAKE_WORD)
     print("  Your name  : " + config.USER_NAME)

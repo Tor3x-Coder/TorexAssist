@@ -460,12 +460,13 @@ is what turns "a folder of scripts" into a real product.
 
 The remaining work, in the order we agreed to do it:
 
-1. **Name the product** — everything else hangs off the name: the wake word
-   becomes "hey \<name>" (already config-driven), plus icon and window title.
-   *(tiny, no download)*
-2. **Buddy-tone replies** — a personality pass on the brain's instruction
-   (system prompt) so answers sound like your mate, not a customer-service
-   robot. *(tiny, no download)*
+1. **Name the product** — the plumbing is DONE: one line in config.ini
+   (`[APP] name =`) already drives the window title, banner, voice prefix
+   and the brain's self-introduction; the wake word is config-driven too.
+   All that remains is picking the actual word. *(waiting on a name)*
+2. **Buddy-tone replies (SHIPPED)** — the brain's instruction now makes it
+   talk like a close friend / little brother: casual, warm, light humour,
+   teases back gently — while staying short enough to be spoken out loud.
 3. **First-run wizard** — on first launch: ask your name out loud, run a mic
    self-test (quality gate), and write everything to `config.ini`. If the mic
    fails the bar, recommend a cheap headset mic before continuing.

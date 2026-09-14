@@ -131,7 +131,7 @@ def _speak_worker(text):
 # ------------------------------------------------------------
 def say(text, wait=True):
     # Always show what it said in the console too. Helps with debugging.
-    print("TorexAssist: " + str(text))
+    print(config.APP_NAME + ": " + str(text))
 
     thread = threading.Thread(target=_speak_worker, args=(str(text),))
     thread.start()
