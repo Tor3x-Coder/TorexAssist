@@ -503,6 +503,32 @@ The remaining work, in the order we agreed to do it:
 13. **Live-news tool** — real headlines, since free Gemini cannot browse the
     web and declines honestly. *(small)*
 
+### Phase 2 — Buddy senses your world (agreed, in order)
+
+14. **Screen awareness v1 (SHIPPED)** — "what am I looking at?" reads the
+    active window's title and says it back. Read-only, on-demand, nothing
+    watched or stored.
+15. **Clipboard, on-demand only (SHIPPED)** — "read my clipboard" speaks what
+    you last copied (trimmed). Deliberately NOT background interception: a
+    privacy-first assistant that secretly watches the clipboard is spyware
+    with a friendly voice.
+16. **Push-to-talk hotkey** — hold a key combo (e.g. Ctrl+Alt+B) and speak,
+    no wake word needed. The answer to "my mic struggles" that costs zero
+    hardware. *(small)*
+17. **Screen awareness v2** — feed the window title (and later, visible text
+    via UI automation) into the brain so "summarize this page" works.
+    *(medium)*
+18. **Focus / do-not-disturb mode** — "focus for an hour": Buddy mutes the
+    system audio, answers ultra-brief, and leaves you alone. *(small-medium)*
+19. **Local file search** — "find that budget spreadsheet from last week":
+    fuzzy search over your own file index, opens only what you confirm —
+    the safety wall stays. *(medium)*
+20. **Toast notifications + tray** — Buddy shrinks to a tray icon and shoots
+    native Windows toasts when long tasks finish (merge with item 6).
+    *(small)*
+21. **Keyboard macros** — user-defined "when I say X, do this key combo"
+    shortcuts, whitelisted like every other action. *(medium)*
+
 ---
 
 Made to be read and edited. Every file is commented like a tutorial on purpose. 🛠️

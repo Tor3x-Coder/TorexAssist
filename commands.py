@@ -670,7 +670,8 @@ def list_commands():
     """Tell the user what they can say."""
     text = ("You can say things like: open, plus almost any app name, "
             "check battery, what is the time, what is the date, "
-            "what is the weather, mute, volume up, volume down, "
+            "what is the weather, what am i looking at, read my clipboard, "
+            "mute, volume up, volume down, "
             "search google for cats, play something on youtube, "
             "system info, lock the computer, shut down, restart, sleep, "
             "or just ask me anything.")
@@ -825,6 +826,26 @@ def try_command(text):
 
     if "my ip" in words or "ip address" in words:
         return True, my_ip()
+
+    # ---- SCREEN AWARENESS (senses.py, read-only, on-demand only) ----
+    if "what am i looking at" in words or "what is this window" in words \
+            or "what app is this" in words or "what is on my screen" in words \
+            or "which app is open" in words:
+        import senses
+        title = senses.active_window_title()
+        if title:
+            return True, "You are looking at " + title + "."
+        return True, "I could not see which window is in front right now."
+
+    if "read my clipboard" in words or "what did i copy" in words \
+            or "what is on my clipboard" in words:
+        import senses
+        clip = senses.clipboard_text()
+        if not clip:
+            return True, "Your clipboard is empty right now."
+        if len(clip) > 140:
+            clip = clip[:140] + "... and it goes on."
+        return True, "Your clipboard says: " + clip
 
     # ---- Internet search ----
     if words.startswith("search google for") or words.startswith("search for") \
