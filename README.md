@@ -440,6 +440,23 @@ These are deliberately NOT built yet — the app above works first.
    backend (at the cost of a ~1 second delay).
 5. **Live-news tool** — the free Gemini tier cannot browse the web, so it
    currently declines news honestly; a dedicated tool would fetch real headlines.
+6. **Mic quality gate at setup** — a listen-yourself test while installing:
+   the user reads one sentence, we score how clear and loud it came in
+   (signal quality). If it fails the bar, we recommend a cheap headset mic
+   before continuing. Built-in laptop mics are the #1 cause of mis-hearings.
+7. **Buddy-tone replies** — a personality pass on the brain's instruction
+   (system prompt) so answers sound like your mate, not a customer-service
+   robot.
+8. **Microsoft Store app discovery** — scan the installed Store apps list
+   (the `shell:AppsFolder` COM folder) so apps like WhatsApp and Snapchat
+   become openable. Store apps leave NO Start Menu shortcut, so today's
+   shortcut scan cannot see them.
+9. **Grammar-capable big ears** — the plain `vosk-model-en-us-0.22` ignores
+   the wake-word word-list trick (it prints "Runtime graphs are not
+   supported", so the idle ear listens with the full vocabulary and false
+   wakes go up). Fix options: swap to `vosk-model-en-us-0.22-lgraph` (same
+   big brain, supports runtime graphs), or run TWO models: the small one
+   idling on the wake word, the big one while you actually talk.
 
 ---
 

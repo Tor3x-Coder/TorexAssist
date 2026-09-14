@@ -15,5 +15,14 @@
 #     [LISTENING]
 #     model_folder = models/vosk-model-en-us-0.22
 #
+# NOTE ON THE BIG MODEL AND THE WAKE-WORD TRICK
+# The plain vosk-model-en-us-0.22 does NOT support "runtime graphs",
+# which is the trick the app uses to hear ONLY the wake word while
+# idling (it prints "Runtime graphs are not supported by this model",
+# then listens with the full vocabulary - more false wakes).
+# If you want the big brain AND the trick, download instead:
+#     vosk-model-en-us-0.22-lgraph   (same size, supports the trick)
+# and point model_folder at it.
+#
 # The model files are ignored by git on purpose - they are big
 # files that belong to somebody else, no reason to upload them.
