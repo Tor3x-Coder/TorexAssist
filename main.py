@@ -29,6 +29,7 @@
 # ============================================================
 
 import datetime
+import os
 import re
 import sys
 import threading
@@ -216,6 +217,7 @@ def main():
     print("  Your name  : " + config.USER_NAME)
     print("  Cloud brain: " + (config.GEMINI_MODEL if config.gemini_ready() else "(no API key yet)"))
     print("  Local brain: Ollama " + config.OLLAMA_MODEL)
+    print("  Ears model : " + os.path.basename(config.MODEL_FOLDER))
     print("=" * 64)
 
     # ---- Step 1: start the background internet checker ----
