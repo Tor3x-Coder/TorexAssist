@@ -129,6 +129,17 @@ DEVICE_INDEX = read_number("LISTENING", "device_index", -1)
 # needing the wake word again. 0 turns the follow-up window off.
 FOLLOW_UP_WINDOW = read_number("LISTENING", "follow_up_window", 8)
 
+# WHICH EARS DO THE LISTENING.
+#   "vosk"    = light, transcribes live, weaker in noisy rooms
+#   "whisper" = OpenAI's pre-trained Whisper (via faster-whisper):
+#               commercial-grade hearing in noise, runs 100% OFFLINE
+#               after a one-time download. Voice never leaves the PC.
+EARS_BACKEND = read_setting("LISTENING", "ears_backend", "vosk").lower()
+
+# Whisper size: tiny(75MB) base(140MB) small(460MB) medium(1.5GB).
+# "small" is the sweet spot for a normal laptop.
+WHISPER_MODEL = read_setting("LISTENING", "whisper_model", "small")
+
 # Folder where the Vosk listening model lives. Any Vosk English model
 # works - the small one is fast, vosk-model-en-us-0.22 hears better.
 # Relative paths are read next to this file, absolute paths as-is.

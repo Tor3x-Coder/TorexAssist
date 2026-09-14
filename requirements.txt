@@ -28,3 +28,8 @@ psutil
 # THE CLOUD BRAIN - Google Gemini
 # Optional. The app still runs without it, using Ollama only.
 google-genai
+
+# OPTIONAL BIG EARS - commercial-grade hearing in noisy rooms.
+# 100% offline and private once downloaded. Install ONLY if you set
+# ears_backend = whisper in config.ini:
+# faster-whisper

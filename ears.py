@@ -370,6 +370,14 @@ def listen_for_command(timeout=None):
     if timeout is None:
         timeout = config.LISTEN_TIMEOUT
 
+    # Big-ears mode: pre-trained Whisper, fully offline (see below).
+    if config.EARS_BACKEND == "whisper":
+        try:
+            return _listen_with_whisper(timeout)
+        except ImportError:
+            print("[ears] faster-whisper is not installed -> staying on Vosk.")
+            print("[ears] Fix with:   pip install faster-whisper")
+
     wait_until_quiet()
 
     open_recognizer.Reset()
@@ -412,3 +420,94 @@ def listen_for_command(timeout=None):
 
     print("\r" + " " * 82 + "\r", end="")     # wipe the live "hearing:" line
     return collected.strip()
+
+
+# ============================================================
+#  OPTIONAL BIG EARS  -  FASTER-WHISPER (OFFLINE, PRIVATE)
+# ============================================================
+#  Vosk is light but goes deaf in a noisy room. OpenAI's Whisper is an
+#  OPEN, already-trained model that hears about as well as the big
+#  commercial assistants - and faster-whisper runs it 100% OFFLINE on
+#  this laptop. The model is downloaded ONCE; after that your voice
+#  never leaves the machine. Nothing is ever sent anywhere, so the
+#  privacy promise is fully kept. (The privacy-killer alternatives are
+#  cloud speech APIs like Google/Azure Speech, which upload your audio
+#  - we deliberately do NOT use those.)
+#
+#  THE BEST-OF-BOTH SPLIT:
+#     wake word  -> the tiny Vosk grammar mode (light, always on)
+#     your words -> Whisper (heavy but sharp, only while you talk)
+#
+#  Trade-off: Whisper writes things down AFTER you stop talking, so
+#  there is a 1-2 second "hmm" while it thinks. That is the price of
+#  its accuracy.
+# ============================================================
+
+_whisper_model = None
+
+
+def _get_whisper_model():
+    """Load Whisper once, keep it warm for the rest of the session."""
+    global _whisper_model
+    if _whisper_model is None:
+        from faster_whisper import WhisperModel
+        print("[ears] loading Whisper '" + config.WHISPER_MODEL +
+              "' (first run downloads it once, give it a moment)...")
+        # cpu + int8 = runs fine on a normal laptop, no graphics card needed
+        _whisper_model = WhisperModel(
+            config.WHISPER_MODEL, device="cpu", compute_type="int8")
+    return _whisper_model
+
+
+def _listen_with_whisper(timeout):
+    """
+    Collect sound until you stop talking, then let Whisper write down
+    exactly what you said. Much tougher than Vosk against noise, TV
+    and laptop-mic mush.
+    """
+    import numpy as np
+
+    wait_until_quiet()
+    drain_queue()
+
+    chunks = []
+    heard_any = False
+    started_at = time.time()
+    last_sound_at = time.time()
+
+    while True:
+        # Safety: never listen forever
+        if time.time() - started_at > timeout + 6:
+            break
+
+        audio = grab_audio()
+
+        if loudness(audio) >= config.ENERGY_THRESHOLD:
+            heard_any = True
+            last_sound_at = time.time()
+
+        if heard_any:
+            chunks.append(audio)
+            # You paused ~1.2s after talking -> perfect moment to think.
+            if time.time() - last_sound_at > 1.2:
+                break
+        elif time.time() - started_at > timeout:
+            break      # you never spoke
+
+    if not chunks:
+        return ""
+
+    print("  [whisper] writing down what you said...")
+
+    # int16 sound -> the float format Whisper wants
+    samples = np.frombuffer(b"".join(chunks), dtype="int16")
+    samples = samples.astype("float32") / 32768.0
+
+    model = _get_whisper_model()
+    segments, _info = model.transcribe(
+        samples, language="en", vad_filter=True)
+    text = " ".join(segment.text for segment in segments).strip()
+
+    if text:
+        print("  [whisper] heard: " + text)
+    return text

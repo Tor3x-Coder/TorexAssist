@@ -283,8 +283,20 @@ print("        Listen timeout: " + str(config.LISTEN_TIMEOUT) + " seconds")
 print("        Follow-up     : " + str(config.FOLLOW_UP_WINDOW) +
       " seconds of no-wake-word listening after each answer")
 print("        Mic sensitivity: " + str(config.ENERGY_THRESHOLD) + "  (lower = more sensitive)")
-print("        Ears model    : " + config.MODEL_FOLDER)
+print("        Ears backend  : " + config.EARS_BACKEND +
+      (" (whisper model: " + config.WHISPER_MODEL + ")" if config.EARS_BACKEND == "whisper" else ""))
+if config.EARS_BACKEND != "whisper":
+    print("        Ears model    : " + config.MODEL_FOLDER)
 ok("Settings file loaded.")
+
+if config.EARS_BACKEND == "whisper":
+    try:
+        import faster_whisper  # noqa
+        ok("faster-whisper is installed - big ears ready.")
+    except ImportError:
+        warn("ears_backend = whisper but faster-whisper is not installed.",
+             ["Run:  pip install faster-whisper",
+              "Until then the app automatically stays on Vosk."])
 
 
 # ------------------------------------------------------------

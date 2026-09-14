@@ -250,6 +250,27 @@ Each new answer opens a fresh window; a few seconds of silence drops you back
 to wake-word mode. Change the length (or set it to `0` to turn it off) with
 `follow_up_window` in `config.ini`.
 
+### Big ears mode (Whisper) — for noisy rooms
+
+If the built-in mic + Vosk mis-hears you too much, switch on the **big ears**:
+
+```
+pip install faster-whisper
+```
+```ini
+[LISTENING]
+ears_backend = whisper
+whisper_model = small
+```
+
+This uses OpenAI's pre-trained **Whisper** model through `faster-whisper`.
+It is downloaded **once**, then runs 100% offline — your voice never leaves
+the laptop, so the privacy promise holds. It hears dramatically better than
+Vosk in noise, TV mush and laptop-mic echo. The price: it writes down what
+you said *after* you stop talking (a 1-2 second pause). The wake word still
+uses the light Vosk model, so idling stays cheap. If `small` feels slow on
+your PC, set `whisper_model = base`.
+
 ---
 
 ## 🔌 Lifecycle — what each power word actually does
@@ -469,8 +490,13 @@ The remaining work, in the order we agreed to do it:
 10. **Updater** — get new versions without `git pull`. *(small-medium)*
 11. **Ollama offline brain** — guided install for the blackout brain once
     there is enough data (~2.7 GB). *(download)*
-12. **Better ears (optional)** — `faster-whisper` as a higher-accuracy
-    backend, at the cost of a ~1 second delay. *(medium, download)*
+12. **Better ears (SHIPPED, optional)** — `faster-whisper` backend
+    (`ears_backend = whisper` in config.ini): open, pre-trained Whisper
+    ears that run fully **offline** and hear about as well as the
+    commercial assistants in noisy rooms — no mic upgrade required, no
+    audio ever leaves the laptop. Trade-off: a 1-2 second think-pause
+    after you stop talking. The wake word stays on light Vosk, so you
+    get the best of both.
 13. **Live-news tool** — real headlines, since free Gemini cannot browse the
     web and declines honestly. *(small)*
 
