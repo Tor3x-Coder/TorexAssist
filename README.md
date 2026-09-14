@@ -37,32 +37,20 @@ No error messages when the internet dies. It just changes brain and keeps going.
 
 ### Step 0 — Get the code onto your laptop
 
-⚠️ **Read this or you will end up with an empty folder.**
-
-The code currently lives on a **branch**, not on `main`. If you run a plain
-`git clone`, you will download *only the README* and wonder where everything went.
-
 Open a terminal in the place you want the project (for example `C:\Users\akach`)
-and run this **exact** command, which asks for the right branch:
+and run:
 
 ```
-git clone -b arena/01a09bd2-torexassist https://github.com/Tor3x-Coder/TorexAssist.git
-```
-
-Then move into it:
-
-```
+git clone https://github.com/Tor3x-Coder/TorexAssist.git
 cd TorexAssist
 dir
 ```
 
 You should see `main.py`, `ears.py`, `brain.py`, `commands.py`, `speaker.py`
-and the rest. If you only see `README.md`, the `-b` part was missing — delete
-the folder and run the clone command again with `-b`.
+and the rest.
 
-> **Don't use git / prefer clicking?** On the GitHub page, switch the branch
-> dropdown to `arena/01a09bd2-torexassist`, then **Code → Download ZIP**, and
-> unzip it. Same result.
+> **Don't use git / prefer clicking?** On the GitHub page click
+> **Code → Download ZIP**, and unzip it. Same result.
 
 ---
 
@@ -115,9 +103,11 @@ pip install -r requirements.txt
 ### Step 4 — Download the listening model (the ears)
 
 1. Go to <https://alphacephei.com/vosk/models>
-2. Download **`vosk-model-small-en-us-0.15`** (about 40 MB)
+2. Download a model. Two good choices:
+   - **`vosk-model-small-en-us-0.15`** (about 40 MB) — light and quick
+   - **`vosk-model-en-us-0.22`** (about 1.8 GB) — hears noticeably better
 3. Unzip it
-4. Put the unzipped folder inside the `models` folder, so you end up with:
+4. Put the unzipped folder inside the `models` folder, so you end up with e.g.:
 
 ```
 TorexAssist/
@@ -129,9 +119,21 @@ TorexAssist/
         └── ...
 ```
 
-> ⚠️ Common mistake: unzipping gives you `vosk-model-small-en-us-0.15` *inside*
+5. Tell the app which folder to use in `config.ini`:
+
+```ini
+[LISTENING]
+model_folder = models/vosk-model-small-en-us-0.15
+```
+
+Any Vosk English model works — the folder name does not have to be anything
+special, because `model_folder` points at it. Absolute paths like
+`C:\models\my-vosk` work too.
+
+> ⚠️ Common mistake: unzipping gives you the model folder *inside*
 > another folder, so you end up with `models/vosk-model.../vosk-model.../`.
-> The folder name must be **directly** inside `models`.
+> The model folder must be **directly** inside `models`
+> (or point `model_folder` at wherever it really is).
 
 ### Step 5 — Get your free Gemini key
 
@@ -185,11 +187,16 @@ Say: **"hey buddy"**, wait for *"Yes?"*, then speak.
 ### Wake it up
 > "hey buddy"
 
+There is exactly **one** wake word. It is set in `config.ini` (`wake_word`),
+so when the product gets its real name it becomes *"hey <app-name>"* with no
+code change. A few forgiving spellings of that same phrase (so a noisy mic is
+forgiven) live in `wake_word_variants`.
+
 ### Instant PC commands (these never touch the AI — they're immediate and work offline)
 
 | Say this | What happens |
 |---|---|
-| "open vscode" / "open chrome" / "open notepad" | Opens that app |
+| "open chrome" / "open vscode" / "open blender" | Opens that app — see **opening apps** below |
 | "check battery" | Reads your real battery % and time left |
 | "what is the time" / "what is the date" | Tells you |
 | "what is the weather" | **Real** live weather (see note below) |
@@ -198,11 +205,64 @@ Say: **"hey buddy"**, wait for *"Yes?"*, then speak.
 | "my ip address" | Your local IP |
 | "search google for nigeria news" | Opens the search in your browser |
 | "play afrobeats on youtube" | Opens YouTube search |
-| "lock the computer" | Locks Windows |
+| "lock the computer" | Locks Windows (**keeps listening** — see lifecycle) |
 | "shut down" / "restart" / "sleep" | **Asks "are you sure?" first** |
 | "what can you do" | Reads out the full list |
-| "forget everything" | Clears the conversation memory |
-| "exit" | Closes the assistant |
+| "forget everything" / "start over" | Clears the conversation memory |
+| "exit" / "quit" / "I am done with you" / "go offline" | Closes the assistant |
+
+### Opening apps — no hardcoded list
+
+There is **no fixed app list** to edit. When you say "open …", TorexAssist
+auto-discovers what you have installed:
+
+1. It scans every shortcut in your **Start Menu** (yours + all users) and
+   resolves what each one really launches.
+2. It merges in every program on your **PATH**.
+3. It fuzzy-matches what you said, so "open chome" still finds Chrome and
+   "open vs code" still finds Visual Studio Code.
+
+If it genuinely can't find the app, it tells you — *"I couldn't find an app
+called X"* — instead of running a guess and popping up an empty black window.
+
+To add or override an app it didn't spot, put one line in the `[APPS]`
+section of `config.ini`:
+
+```ini
+[APPS]
+blender = C:\Program Files\Blender Foundation\Blender 4.2\blender.exe
+my notes = notepad C:\Users\You\notes.txt
+```
+
+### The follow-up window — just keep talking
+
+After the assistant answers, it **keeps listening for about 8 seconds**
+without needing the wake word again. So you can have a real back-and-forth:
+
+> you: "hey buddy" … *"what is the weather?"*
+> assistant: *"It is 31 degrees and sunny."*
+> you: *"and tomorrow?"* ← no wake word needed
+
+Each new answer opens a fresh window; a few seconds of silence drops you back
+to wake-word mode. Change the length (or set it to `0` to turn it off) with
+`follow_up_window` in `config.ini`.
+
+---
+
+## 🔌 Lifecycle — what each power word actually does
+
+These four sound similar but do very different things. Knowing the difference
+stops a careless phrase from killing your work.
+
+| You say | Scope | What actually happens |
+|---|---|---|
+| "exit" / "quit" / "I am done with you" / "go offline" | **the assistant** | Full close of TorexAssist itself. The mic is released and the program ends. Your PC keeps running. |
+| "go to sleep" / "sleep mode" | **the machine** | The laptop sleeps. The assistant just **pauses** with it and carries on when you wake. |
+| "lock the computer" | **the screen** | Windows locks. The assistant **keeps listening** on the lock screen, so you can call it right back. |
+| "shut down" / "restart" | **the machine** | Machine power-off / reboot. Always confirms first, because a mic mis-hear must never kill your work. |
+
+> 💡 The subtle one: **"go to sleep"** sleeps the *machine*, while
+> **"go to sleep now"** (and the other exit phrases) closes the *assistant*.
 
 ### Anything else → the AI
 > "hey buddy" … *"tell me a joke"*
@@ -317,32 +377,33 @@ unlock can be added later.
 |---|---|
 | **It never hears me at all** | Windows mic privacy setting. Step 6 above. Almost always this. |
 | **It never hears "hey buddy"** | Built-in laptop mics are weak. Move closer, speak clearly, or lower `energy_threshold` in `config.ini` to `200`. Best fix: any cheap headset mic. |
-| **It wakes up by itself / from the TV** | Raise `energy_threshold` to `500`, and remove loose spellings from `WAKE_WORDS` in `ears.py`. |
+| **It wakes up by itself / from the TV** | Raise `energy_threshold` to `500`, and empty `wake_word_variants` in `config.ini` so only the exact wake word is accepted. |
 | **It answers itself in a loop** | Shouldn't happen — `speaker.is_speaking` mutes the mic. If it does, increase the pause at the bottom of `speaker._speak_worker`. |
 | **`KeyError: 'sapi5'`** | You're on Python 3.13+. Install 3.11 or 3.12. (This app doesn't use pyttsx3, so you should not see this at all.) |
 | **No sound but no error** | Wrong output device, or the app started before Windows audio was ready. There's already a 1-second delay in `main.py`. |
 | **`ModuleNotFoundError: No module named 'vosk'`** | You have more than one Python. Run `py -3.11 -m pip install -r requirements.txt` then `py -3.11 main.py`. |
 | **First offline answer takes 15 seconds** | Normal. Ollama is loading the model off disk. There's a beep so you know it's thinking. |
 | **Gemini says the model doesn't exist** | Google renames free models. Check <https://ai.google.dev/gemini-api/docs/models> and update `gemini_model` in `config.ini`. |
-| **"Open vscode" does nothing** | `code` isn't on your PATH. Put the full path in `APP_LIST` in `commands.py`. |
+| **"Open X" says it can't find the app** | It isn't in your Start Menu or PATH. Add it under `[APPS]` in `config.ini` (full path on the right). |
+| **"Open X" opens the wrong app** | The fuzzy match guessed. Say the app's exact shortcut name, or add the exact name under `[APPS]` in `config.ini`. |
 | **Ollama connection refused** | It isn't running. `main.py` tries to start it; if that fails, run `ollama serve` manually once. |
 
 ---
 
 ## ✏️ How to add your own command
 
-Open `commands.py`.
-
-**To add an app**, just add a line to `APP_LIST`:
-```python
-APP_LIST = {
-    "vs code": "code",
-    "blender": r"C:\Program Files\Blender Foundation\Blender 4.0\blender.exe",
-    #  ^ the r before the quote matters on Windows paths
-}
+**To add an app**, you normally don't need to touch any code — apps are
+auto-discovered from your Start Menu and PATH. If one is missing, add a line
+to the `[APPS]` section of `config.ini`:
+```ini
+[APPS]
+blender = C:\Program Files\Blender Foundation\Blender 4.2\blender.exe
+#  The left side is what you SAY, the right side is what RUNS.
+#  Right side can be a full path, a plain command, or a windows: URI.
 ```
 
-**To add a new action**, copy any block in `try_command()` and change the words:
+**To add a new action**, open `commands.py`, copy any block in
+`try_command()` and change the words:
 ```python
 if "open my notes" in words:
     run_hidden(r"notepad C:\Users\You\notes.txt")
@@ -364,15 +425,21 @@ That's it. No other file needs touching.
 
 ---
 
-## 🗺️ Where to go next (once this all works)
+## 🗺️ Where to go next (agreed roadmap)
 
-1. **Nicer voice** — download [Piper](https://github.com/rhasspy/piper) for a
-   natural-sounding offline voice instead of Microsoft David.
-2. **Detect unlock, not just login** — needs `pywin32` session messages.
-3. **Bigger offline brain** — `ollama pull llama3.2:3b` and change one line in `config.ini`.
-4. **Better ears** — `faster-whisper` is much more accurate than Vosk (at the cost
-   of a ~1 second delay, since it transcribes after you stop talking).
-5. **System tray icon** — so you can always see whether it's listening.
+These are deliberately NOT built yet — the app above works first.
+
+1. **First-run voice wizard** — on the very first launch, ask the user their
+   name out loud and write it into `config.ini` automatically.
+2. **GUI / better voice** — a small settings window with a voice picker, and
+   swap the built-in SAPI voice for [Piper](https://github.com/rhasspy/piper)
+   neural voices (much more natural).
+3. **Ollama offline brain install** — once the user has enough data (~2.7 GB),
+   walk through installing the offline brain for blackout use.
+4. **Better ears** — `faster-whisper` as an optional, higher-accuracy listening
+   backend (at the cost of a ~1 second delay).
+5. **Live-news tool** — the free Gemini tier cannot browse the web, so it
+   currently declines news honestly; a dedicated tool would fetch real headlines.
 
 ---
 

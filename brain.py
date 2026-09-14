@@ -58,6 +58,12 @@ SYSTEM_PROMPT = (
 # The memory of the current conversation, newest at the end.
 # Both brains share this, so switching between them mid-chat still
 # feels like one continuous conversation.
+#
+# FORMAT: plain dicts,  {"role": "user" | "assistant", "content": ...}
+# That is exactly what Ollama wants. Gemini is pickier - its pydantic
+# models reject plain dicts - so ask_gemini() converts this list into
+# google.genai types.Content objects on the fly. One memory, two
+# dialects.
 history = []
 
 
@@ -112,12 +118,34 @@ def ask_gemini(user_text):
     We do NOT add it again here, otherwise a Gemini failure would
     leave the question saved twice and the offline brain would see
     you asking the same thing back to back.
+
+    HISTORY FORMAT: the SDK's pydantic models reject plain
+    {"role": ..., "content": ...} dicts. The conversation must be
+    sent as google.genai types.Content objects - a role plus parts.
+    We translate our simple memory into that shape right here.
     """
     gemini = _get_gemini_client()
 
+    from google.genai import types
+
+    contents = []
+    for item in history:
+        # Our memory says "assistant"; Gemini calls that role "model".
+        role = "user" if item["role"] == "user" else "model"
+        contents.append(types.Content(
+            role=role,
+            # text= as a keyword: works on both old and new SDK versions.
+            parts=[types.Part.from_text(text=item["content"])],
+        ))
+
+    # Gemini wants the first line to come from the user. If the memory
+    # was trimmed so that a model line ended up first, drop those.
+    while contents and contents[0].role != "user":
+        contents.pop(0)
+
     response = gemini.models.generate_content(
         model=config.GEMINI_MODEL,
-        contents=history,
+        contents=contents,
         config={
             "system_instruction": SYSTEM_PROMPT,
             "max_output_tokens": 220,       # short on purpose
@@ -129,7 +157,8 @@ def ask_gemini(user_text):
     if not reply:
         raise Exception("Gemini returned an empty answer")
 
-    remember("model", reply)
+    # "assistant" (not "model") so both brains use the same role word.
+    remember("assistant", reply)
     return reply
 
 

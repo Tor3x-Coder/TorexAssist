@@ -140,9 +140,12 @@ else:
     bad("Model folder NOT found.",
         ["Expected here:",
          "  " + config.MODEL_FOLDER,
-         "Download 'vosk-model-small-en-us-0.15' from:",
+         "Download a model from:",
          "  https://alphacephei.com/vosk/models",
-         "Unzip it into: " + os.path.join(config.BASE_DIR, "models")])
+         "(small 'vosk-model-small-en-us-0.15', or the bigger,",
+         " better-hearing 'vosk-model-en-us-0.22')",
+         "Unzip it into: " + os.path.join(config.BASE_DIR, "models"),
+         "or point model_folder in config.ini at the folder you have."])
 
 
 # ------------------------------------------------------------
@@ -277,7 +280,10 @@ print("        Speech rate   : " + str(config.SPEECH_RATE))
 print("        Voice         : " + (config.VOICE_NAME or "(Windows default)"))
 print("        City (weather): " + (config.CITY or "(auto-detect from internet)"))
 print("        Listen timeout: " + str(config.LISTEN_TIMEOUT) + " seconds")
+print("        Follow-up     : " + str(config.FOLLOW_UP_WINDOW) +
+      " seconds of no-wake-word listening after each answer")
 print("        Mic sensitivity: " + str(config.ENERGY_THRESHOLD) + "  (lower = more sensitive)")
+print("        Ears model    : " + config.MODEL_FOLDER)
 ok("Settings file loaded.")
 
 

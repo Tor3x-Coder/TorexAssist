@@ -19,20 +19,36 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(BASE_DIR, "config.ini")
 
 
-# --- A little helper that reads one setting safely --------------
-# If the setting is missing it just gives back the fallback value,
+# --- Little helpers that read settings safely -------------------
+# If a setting is missing they just give back the fallback value,
 # so the app never crashes because of a typo in config.ini.
-def read_setting(section, key, fallback=""):
-    parser = configparser.ConfigParser()
+# interpolation=None means a literal % in a value (a Windows path,
+# say) cannot be mis-read as a variable.
+def _make_parser():
+    parser = configparser.ConfigParser(interpolation=None)
     parser.read(CONFIG_FILE)
+    return parser
+
+
+def read_setting(section, key, fallback=""):
+    parser = _make_parser()
     try:
         return parser.get(section, key).strip()
     except Exception:
         return fallback
 
 
+def has_setting(section, key):
+    """True if the key actually exists in config.ini (even if blank)."""
+    parser = _make_parser()
+    try:
+        return parser.has_option(section, key)
+    except Exception:
+        return False
+
+
 def read_number(section, key, fallback):
-    """Same as above but for numbers (like 300 or 8)."""
+    """Same as read_setting but for numbers (like 400 or 8)."""
     text = read_setting(section, key, "")
     try:
         return int(text)
@@ -41,7 +57,7 @@ def read_number(section, key, fallback):
 
 
 def read_true_false(section, key, fallback=True):
-    """Same as above but for true / false."""
+    """Same as read_setting but for true / false."""
     text = read_setting(section, key, "").lower()
     if text in ("true", "yes", "1", "on"):
         return True
@@ -50,13 +66,40 @@ def read_true_false(section, key, fallback=True):
     return fallback
 
 
+def read_section(section):
+    """Every key = value pair of a whole section, as a dict."""
+    parser = _make_parser()
+    try:
+        return {key: value.strip() for key, value in parser.items(section)}
+    except Exception:
+        return {}
+
+
 # ============================================================
 #  THE SETTINGS, LOADED ONCE, READY TO USE
 # ============================================================
 
 # About you
 USER_NAME = read_setting("USER", "name", "Torex")
+
+# THE wake word. Single, and config-driven: once the product gets a
+# name, this becomes "hey <app-name>" with zero code changes.
 WAKE_WORD = read_setting("USER", "wake_word", "hey buddy").lower()
+
+# Extra spellings of the SAME wake word (a small model plus a laptop
+# mic sometimes mis-hears it). This is config-driven too:
+#   * key missing        -> sensible defaults for "hey buddy"
+#   * key present, empty -> no variants at all, exact phrase only
+#   * key present, list  -> exactly your list (comma separated)
+_DEFAULT_WAKE_VARIANTS = ["hey body", "hey budi", "hey brody", "hey buddy buddy"]
+if has_setting("USER", "wake_word_variants"):
+    WAKE_WORD_VARIANTS = [
+        v.strip().lower()
+        for v in read_setting("USER", "wake_word_variants").split(",")
+        if v.strip()
+    ]
+else:
+    WAKE_WORD_VARIANTS = list(_DEFAULT_WAKE_VARIANTS)
 
 # Voice
 SPEECH_RATE = read_number("VOICE", "rate", 2)
@@ -75,14 +118,35 @@ CITY = read_setting("WEATHER", "city", "")
 
 # Listening
 LISTEN_TIMEOUT = read_number("LISTENING", "listen_timeout", 8)
-ENERGY_THRESHOLD = read_number("LISTENING", "energy_threshold", 300)
+
+# 400 is a good default for a built-in laptop mic. Lower (200) if it
+# never hears you, higher (500+) if it wakes up by itself.
+ENERGY_THRESHOLD = read_number("LISTENING", "energy_threshold", 400)
+
 DEVICE_INDEX = read_number("LISTENING", "device_index", -1)
+
+# After every answer, keep listening for this many seconds WITHOUT
+# needing the wake word again. 0 turns the follow-up window off.
+FOLLOW_UP_WINDOW = read_number("LISTENING", "follow_up_window", 8)
+
+# Folder where the Vosk listening model lives. Any Vosk English model
+# works - the small one is fast, vosk-model-en-us-0.22 hears better.
+# Relative paths are read next to this file, absolute paths as-is.
+_model_folder_raw = read_setting("LISTENING", "model_folder", "")
+if _model_folder_raw:
+    if os.path.isabs(_model_folder_raw):
+        MODEL_FOLDER = _model_folder_raw
+    else:
+        MODEL_FOLDER = os.path.join(BASE_DIR, _model_folder_raw)
+else:
+    MODEL_FOLDER = os.path.join(BASE_DIR, "models", "vosk-model-small-en-us-0.15")
 
 # Safety
 CONFIRM_DANGEROUS = read_true_false("COMMANDS", "confirm_dangerous", True)
 
-# Folder where the Vosk listening model lives
-MODEL_FOLDER = os.path.join(BASE_DIR, "models", "vosk-model-small-en-us-0.15")
+# App overrides / additions for "open <name>" - see [APPS] in
+# config.ini. Keys are spoken names (lowercased automatically).
+APP_OVERRIDES = read_section("APPS")
 
 
 # Quick sanity check so you get a clear message instead of a weird crash.

@@ -5,20 +5,33 @@
 #
 #  WHAT HAPPENS
 #    1. It checks your internet (quietly, in the background).
-#    2. It opens the microphone and starts listening.
-#    3. It says hello.
-#    4. It waits to hear the wake word.
-#    5. When it hears it:
+#    2. It discovers your installed apps (also in the background).
+#    3. It opens the microphone and starts listening.
+#    4. It says hello.
+#    5. It waits to hear the wake word.
+#    6. When it hears it:
 #         - if it is a PC command  -> run it instantly (no AI)
 #         - if it is a question    -> ask the AI
 #                                    Gemini first, Ollama if that fails
-#    6. Back to step 4. Forever.
+#    7. After EVERY answer it keeps listening for a few more seconds
+#       (the FOLLOW-UP WINDOW) so you can just keep talking without
+#       saying the wake word again. Silence ends the window.
+#    8. Back to step 5. Forever.
 #
-#  TO STOP IT:  say "exit", or press Ctrl + C in the window.
+#  LIFECYCLE  (see also the big comment in commands.py)
+#    exit  ("exit", "I am done with you", "go offline", ...)
+#          -> full close of the assistant itself
+#    sleep -> the MACHINE sleeps; the assistant pauses with it
+#    lock  -> the screen locks; the assistant KEEPS LISTENING
+#    shut down / restart -> machine-level, confirmed first
+#
+#  TO STOP IT:  say an exit phrase, or press Ctrl + C in the window.
 # ============================================================
 
 import datetime
+import re
 import sys
+import threading
 import time
 
 import config
@@ -29,8 +42,45 @@ import internet
 import speaker
 
 
-# Words that mean "goodbye, shut yourself down"
-EXIT_WORDS = ["exit", "quit", "shut yourself down", "go to sleep now", "goodbye assistant"]
+# ------------------------------------------------------------
+#  Words that mean "goodbye, shut yourself down".
+#  These close THE ASSISTANT (not the machine). Matched with word
+#  boundaries so a sentence that merely CONTAINS one of these words
+#  is less likely to hang up on you by accident.
+# ------------------------------------------------------------
+EXIT_WORDS = [
+    # plain and simple
+    "exit",
+    "quit",
+    # shutting the assistant itself down
+    "shut yourself down",
+    "shut yourself off",
+    "power yourself down",
+    "power yourself off",
+    "go to sleep now",          # NOTE: plain "go to sleep" sleeps the MACHINE
+    # farewells
+    "goodbye assistant",
+    "goodbye buddy",
+    "bye buddy",
+    "see you later",
+    # "done with you" style
+    "done with you",
+    "we are done",
+    "that is all for now",
+    "that's all for now",
+    "that will be all",
+    # "go offline" style
+    "go offline",
+    "go off line",
+    "go offline now",
+    "you can go offline",
+    "you can go now",
+    "stop listening",
+]
+
+EXIT_PATTERNS = [
+    re.compile(r"\b" + re.escape(phrase) + r"\b") for phrase in EXIT_WORDS
+]
 
 
 # ------------------------------------------------------------
@@ -82,10 +132,10 @@ def handle(heard_text):
     """Returns True to keep running, False to exit."""
     print("You said: " + heard_text)
 
-    # 1. Does the user want to quit?
+    # 1. Does the user want to quit? (Full close of the assistant.)
     lowered = heard_text.lower()
-    for exit_word in EXIT_WORDS:
-        if exit_word in lowered:
+    for pattern in EXIT_PATTERNS:
+        if pattern.search(lowered):
             speaker.say("Alright " + config.USER_NAME + ", I am going offline. See you soon.")
             return False
 
@@ -105,6 +155,46 @@ def handle(heard_text):
     answer = brain.ask(heard_text)
     speaker.say(answer)
     return True
+
+
+# ------------------------------------------------------------
+#  THE FOLLOW-UP WINDOW
+# ------------------------------------------------------------
+#  After every answer we keep listening for a few seconds (about 8,
+#  set in config.ini) WITHOUT needing the wake word again. That makes
+#  a real conversation possible:
+#
+#      you : "hey buddy" ... "what is the weather?"
+#      app : "It is 31 degrees and sunny."
+#      you : "and tomorrow?"          <- no wake word needed
+#
+#  Each new answer opens a fresh window. Silence ends it and drops
+#  us back to wake-word-only listening. An exit phrase ends the app.
+# ------------------------------------------------------------
+def follow_up_conversation():
+    """
+    Keep the ears open briefly after an answer.
+    Returns True to keep running, False if the user said goodbye.
+    """
+    if config.FOLLOW_UP_WINDOW <= 0:
+        return True     # window switched off in config.ini
+
+    wake_words = [w.lower() for w in ears.WAKE_WORDS]
+
+    while True:
+        heard = ears.listen_for_command(timeout=config.FOLLOW_UP_WINDOW)
+
+        if not heard:
+            return True         # silence -> the window is over
+
+        # A stray wake word inside the window is not a question.
+        if heard.strip().lower() in wake_words:
+            continue
+
+        if not handle(heard):
+            return False
+        # handle() answered -> loop around and listen for the next
+        # follow-up. The conversation continues until you go quiet.
 
 
 # ------------------------------------------------------------
@@ -136,23 +226,32 @@ def main():
     # first offline question is not slow.
     brain.make_sure_ollama_is_running()
 
-    # ---- Step 3: open the ears ----
+    # ---- Step 3: discover your apps in the background ----
+    # Scanning the Start Menu takes a moment, so we do it now instead
+    # of during your first "open something".
+    threading.Thread(target=commands.warm_up_apps, daemon=True).start()
+
+    # ---- Step 4: open the ears ----
     if not ears.setup():
         print("\nCould not start listening. Read the message above and try again.")
         input("\nPress Enter to close...")
         return
 
-    # ---- Step 4: say hello ----
+    # ---- Step 5: say hello ----
     # Small pause so the Windows sound system is fully awake first.
     # Without this, the very first greeting is sometimes silent.
     time.sleep(1.0)
     speaker.say(make_greeting())
 
     print("\nReady. Say '" + config.WAKE_WORD + "' to talk to me.")
+    if config.FOLLOW_UP_WINDOW > 0:
+        print("After each answer I keep listening for " +
+              str(config.FOLLOW_UP_WINDOW) +
+              " seconds, so you can just keep talking.")
     print("Say 'what can you do' for the command list.")
     print("Say 'exit' or press Ctrl+C to quit.\n")
 
-    # ---- Step 5: the forever loop ----
+    # ---- Step 6: the forever loop ----
     while True:
         try:
             # Wait here until the wake word is heard.
@@ -163,6 +262,8 @@ def main():
             # not the wake word. Just do it, no extra listening needed.
             if phrase not in [w.lower() for w in ears.WAKE_WORDS]:
                 keep_going = handle(phrase)
+                if keep_going:
+                    keep_going = follow_up_conversation()
                 if not keep_going:
                     break
                 continue
@@ -176,6 +277,8 @@ def main():
                 continue
 
             keep_going = handle(heard)
+            if keep_going:
+                keep_going = follow_up_conversation()
             if not keep_going:
                 break
 
@@ -196,6 +299,8 @@ def main():
             continue
 
     # ---- Clean up ----
+    # shutdown() swallows everything (including another Ctrl+C),
+    # so the very last step is always a calm one.
     ears.shutdown()
     print("TorexAssist has stopped.")
 

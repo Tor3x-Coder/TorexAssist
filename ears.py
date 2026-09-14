@@ -54,19 +54,18 @@ import config
 #  These are the only things the mic hears while the app is idling.
 #  Add or remove words freely, it is just a list.
 #
-#  About the extra spellings of the wake word: a small model plus a
-#  built-in laptop mic will sometimes hear it slightly wrong. So we
-#  also accept close versions. This is not a hack - real commercial
-#  assistants do exactly the same thing.
+#  THE WAKE WORD IS SINGLE AND CONFIG-DRIVEN.
+#  There is exactly one wake phrase - the one in config.ini
+#  (currently "hey buddy"; once the product is named it becomes
+#  "hey <app-name>", no code change needed). The VARIANTS are not
+#  extra wake phrases: they are just forgiving spellings of the SAME
+#  phrase, because a small model plus a laptop mic sometimes
+#  mis-hears it. Real commercial assistants do the same thing.
+#  Edit them (or switch them off) in config.ini -> wake_word_variants.
 # ============================================================
-WAKE_WORDS = [
-    config.WAKE_WORD,      # the one you chose in config.ini
-    "hey buddy",
-    "hey body",
-    "hey budi",
-    "hey brody",
-    "hey buddy buddy",
-    "okay buddy",
+WAKE_WORDS = [config.WAKE_WORD] + [
+    variant for variant in config.WAKE_WORD_VARIANTS
+    if variant and variant != config.WAKE_WORD
 ]
 
 INSTANT_COMMANDS = [
@@ -172,12 +171,14 @@ def setup():
         print()
         print("  How to fix it:")
         print("    1. Go to  https://alphacephei.com/vosk/models")
-        print("    2. Download 'vosk-model-small-en-us-0.15' (about 40 MB)")
+        print("    2. Download a model, e.g. 'vosk-model-small-en-us-0.15'")
+        print("       (about 40 MB) or the bigger, better-hearing")
+        print("       'vosk-model-en-us-0.22' (about 1.8 GB).")
         print("    3. Unzip it.")
         print("    4. Move the unzipped folder into:")
         print("         " + os.path.join(config.BASE_DIR, "models"))
-        print("    5. The folder must be named EXACTLY:")
-        print("         vosk-model-small-en-us-0.15")
+        print("    5. Point model_folder in config.ini at the folder, e.g.:")
+        print("         model_folder = models/vosk-model-small-en-us-0.15")
         print("=" * 64)
         return False
 
@@ -256,12 +257,18 @@ def setup():
 
 
 def shutdown():
-    """Close the microphone cleanly when the app exits."""
+    """
+    Close the microphone cleanly when the app exits.
+    Swallows EVERYTHING - including Ctrl+C - so the very last thing
+    the app does is always a calm exit, never a traceback.
+    """
     global stream
     try:
         if stream is not None:
             stream.stop()
             stream.close()
+    except KeyboardInterrupt:
+        pass        # Ctrl+C during shutdown: just keep going
     except Exception:
         pass
     stream = None
@@ -351,14 +358,18 @@ def wait_for_wake_word():
 # ============================================================
 #  MODE 2  -  LISTEN TO YOUR FULL SENTENCE
 # ============================================================
-def listen_for_command():
+def listen_for_command(timeout=None):
     """
-    Called right after the wake word. Uses the FULL vocabulary so you
-    can ask anything at all.
+    Called right after the wake word, and also during the follow-up
+    window. Uses the FULL vocabulary so you can ask anything at all.
 
-    Stops when you finish speaking, or after config.LISTEN_TIMEOUT
-    seconds of nothing. Returns your words, or "" if it heard nothing.
+    Stops when you finish speaking, or after `timeout` seconds of
+    nothing (default: config.LISTEN_TIMEOUT).
+    Returns your words, or "" if it heard nothing.
     """
+    if timeout is None:
+        timeout = config.LISTEN_TIMEOUT
+
     wait_until_quiet()
 
     open_recognizer.Reset()
@@ -370,11 +381,11 @@ def listen_for_command():
 
     while True:
         # Safety: never listen forever
-        if time.time() - started_at > config.LISTEN_TIMEOUT + 6:
+        if time.time() - started_at > timeout + 6:
             break
 
         # You have been quiet too long
-        if time.time() - last_sound_at > config.LISTEN_TIMEOUT:
+        if time.time() - last_sound_at > timeout:
             break
 
         audio = grab_audio()
