@@ -428,34 +428,51 @@ That's it. No other file needs touching.
 
 ---
 
-## 🗺️ Where to go next (agreed roadmap)
+## 🗺️ The master plan, in order
 
-These are deliberately NOT built yet — the app above works first.
+**Already shipped and working on the laptop today:** wake-word listening +
+follow-up window, auto-discovered app opening (Start Menu + PATH + Store
+apps), instant PC commands, real weather, the Gemini cloud brain with
+conversation memory, silent online/offline design, config-driven everything,
+and the setup doctor. Functionally it is already an assistant; the list below
+is what turns "a folder of scripts" into a real product.
 
-1. **First-run voice wizard** — on the very first launch, ask the user their
-   name out loud and write it into `config.ini` automatically.
-2. **GUI / better voice** — a small settings window with a voice picker, and
-   swap the built-in SAPI voice for [Piper](https://github.com/rhasspy/piper)
-   neural voices (much more natural).
-3. **Ollama offline brain install** — once the user has enough data (~2.7 GB),
-   walk through installing the offline brain for blackout use.
-4. **Better ears** — `faster-whisper` as an optional, higher-accuracy listening
-   backend (at the cost of a ~1 second delay).
-5. **Live-news tool** — the free Gemini tier cannot browse the web, so it
-   currently declines news honestly; a dedicated tool would fetch real headlines.
-6. **Mic quality gate at setup** — a listen-yourself test while installing:
-   the user reads one sentence, we score how clear and loud it came in
-   (signal quality). If it fails the bar, we recommend a cheap headset mic
-   before continuing. Built-in laptop mics are the #1 cause of mis-hearings.
-7. **Buddy-tone replies** — a personality pass on the brain's instruction
+The remaining work, in the order we agreed to do it:
+
+1. **Name the product** — everything else hangs off the name: the wake word
+   becomes "hey \<name>" (already config-driven), plus icon and window title.
+   *(tiny, no download)*
+2. **Buddy-tone replies** — a personality pass on the brain's instruction
    (system prompt) so answers sound like your mate, not a customer-service
-   robot.
-8. **Grammar-capable big ears** — the plain `vosk-model-en-us-0.22` ignores
-   the wake-word word-list trick (it prints "Runtime graphs are not
-   supported", so the idle ear listens with the full vocabulary and false
-   wakes go up). Fix options: swap to `vosk-model-en-us-0.22-lgraph` (same
-   big brain, supports runtime graphs), or run TWO models: the small one
-   idling on the wake word, the big one while you actually talk.
+   robot. *(tiny, no download)*
+3. **First-run wizard** — on first launch: ask your name out loud, run a mic
+   self-test (quality gate), and write everything to `config.ini`. If the mic
+   fails the bar, recommend a cheap headset mic before continuing.
+   *(small, no download)*
+4. **Grammar-capable big ears** — the plain `vosk-model-en-us-0.22` ignores
+   the wake-word word-list trick ("Runtime graphs are not supported"), so the
+   idle ear listens with the full vocabulary and false wakes go up. Fix:
+   swap to `vosk-model-en-us-0.22-lgraph`, or run TWO models (small one
+   idling on the wake word, big one while you talk). *(download or medium code)*
+5. **Never-die hardening** — a log file (so debugging doesn't need
+   copy-pasting the console) plus auto-restart on crash, and mic recovery
+   after the laptop sleeps or the mic gets stolen by Zoom/Teams. *(small)*
+6. **System tray icon** — always see whether it is listening; right-click for
+   mute / exit. *(small)*
+7. **Nicer voice** — swap the built-in SAPI voice for
+   [Piper](https://github.com/rhasspy/piper) neural voices, with a voice
+   picker. *(medium, download)*
+8. **Settings window (GUI)** — edit settings without Notepad. *(medium)*
+9. **Real installer** — one double-click installer (PyInstaller + Inno):
+   app icon, Start Menu shortcut, start-at-login, uninstaller. THIS is the
+   moment it becomes a "real app" for Windows. *(medium)*
+10. **Updater** — get new versions without `git pull`. *(small-medium)*
+11. **Ollama offline brain** — guided install for the blackout brain once
+    there is enough data (~2.7 GB). *(download)*
+12. **Better ears (optional)** — `faster-whisper` as a higher-accuracy
+    backend, at the cost of a ~1 second delay. *(medium, download)*
+13. **Live-news tool** — real headlines, since free Gemini cannot browse the
+    web and declines honestly. *(small)*
 
 ---
 
