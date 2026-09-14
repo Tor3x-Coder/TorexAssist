@@ -876,9 +876,17 @@ def try_command(text):
     # Checked near the bottom on purpose, because "open" appears in
     # lots of normal sentences. Apps are auto-discovered from your
     # Start Menu and PATH - see the top of this file. No hardcoding.
-    if words.startswith("open ") or words.startswith("launch ") \
-            or words.startswith("start ") or words.startswith("run "):
-        app_name = words
+    #
+    # The mic LOVES to glue a stray word in front ("the open snapchat"),
+    # so peel common lead-in junk off before looking for the open-verb.
+    lead = words
+    for filler in ("the ", "a ", "please ", "yo ", "hey buddy ", "okay "):
+        if lead.startswith(filler):
+            lead = lead[len(filler):]
+
+    if lead.startswith("open ") or lead.startswith("launch ") \
+            or lead.startswith("start ") or lead.startswith("run "):
+        app_name = lead
         for prefix in ("open", "launch", "start", "run"):
             app_name = app_name.replace(prefix, "", 1)
         return True, open_app(app_name)
