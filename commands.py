@@ -214,6 +214,61 @@ def _path_apps():
     return apps
 
 
+def _store_apps():
+    """
+    Everything Windows shows under Start -> All apps. This is the ONLY
+    way to see Microsoft Store apps (WhatsApp, Snapchat, ...): they do
+    NOT leave .lnk shortcuts behind, so the Start Menu scan above is
+    blind to them.
+
+    Instead of heavy COM acrobatics we just ask PowerShell politely
+    (Get-StartApps). It also lists normal apps, but those are already
+    known from the shortcut scan, so they only fill gaps here.
+    """
+    kwargs = {}
+    if sys.platform == "win32":
+        # 0x08000000 = CREATE_NO_WINDOW (no black box flash)
+        kwargs["creationflags"] = 0x08000000
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+             "Get-StartApps | ConvertTo-Json -Compress"],
+            capture_output=True, timeout=30, **kwargs)
+        return _parse_start_apps(result.stdout.decode("utf-8", "replace"))
+    except Exception:
+        return {}
+
+
+def _parse_start_apps(text):
+    """Turn the Get-StartApps JSON into spoken-name entries."""
+    import json as json_module
+    apps = {}
+    try:
+        data = json_module.loads(text)
+    except Exception:
+        return apps
+    if isinstance(data, dict):     # only ONE app -> JSON gives an object
+        data = [data]
+    if not isinstance(data, list):
+        return apps
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("Name") or "").strip().lower()
+        app_id = (item.get("AppID") or "").strip()
+        if not name or not app_id or _is_junk_name(name):
+            continue
+        if name not in apps:
+            apps[name] = {
+                "kind": "store",
+                "path": app_id,
+                "target": "shell:AppsFolder\\" + app_id,
+                "args": "",
+            }
+    return apps
+
+
 def discover_apps():
     """Build the full spoken-name -> app table. See the header above."""
     apps = {}
@@ -231,7 +286,13 @@ def discover_apps():
                 "args": "",
             }
 
-    # 3. The tiny system floor (Settings, Camera, ...).
+    # 3. The Start menu's full app list - the ONLY place Microsoft
+    #    Store apps (WhatsApp, Snapchat, ...) show up.
+    for name, entry in _store_apps().items():
+        if name not in apps:
+            apps[name] = entry
+
+    # 4. The tiny system floor (Settings, Camera, ...).
     for name, target in SYSTEM_APPS.items():
         if name not in apps:
             apps[name] = {
@@ -241,7 +302,7 @@ def discover_apps():
                 "args": "",
             }
 
-    # 4. config.ini [APPS] overrides - these ALWAYS win.
+    # 5. config.ini [APPS] overrides - these ALWAYS win.
     for name, target in config.APP_OVERRIDES.items():
         target = target.strip()
         if name and target:
@@ -390,6 +451,13 @@ def launch_app(entry):
     """
     target = (entry.get("target") or "").strip()
     args = (entry.get("args") or "").strip()
+
+    # A Start-menu-registered app (Microsoft Store apps like WhatsApp
+    # or Snapchat): launch it through explorer with its AppsFolder
+    # address. This is the known-good trick for Store apps.
+    if target.startswith("shell:AppsFolder"):
+        os.startfile("explorer.exe", arguments=target)
+        return
 
     # Windows URIs (ms-settings:, ms-photos:, https://...) -
     # hand them straight to the OS.

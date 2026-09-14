@@ -219,7 +219,10 @@ auto-discovers what you have installed:
 1. It scans every shortcut in your **Start Menu** (yours + all users) and
    resolves what each one really launches.
 2. It merges in every program on your **PATH**.
-3. It fuzzy-matches what you said, so "open chome" still finds Chrome and
+3. It asks Windows for the full **All-apps list** (`Get-StartApps`) — this
+   is the only place Microsoft Store apps like WhatsApp or Snapchat show
+   up, because Store apps leave no shortcuts behind.
+4. It fuzzy-matches what you said, so "open chome" still finds Chrome and
    "open vs code" still finds Visual Studio Code.
 
 If it genuinely can't find the app, it tells you — *"I couldn't find an app
@@ -447,11 +450,7 @@ These are deliberately NOT built yet — the app above works first.
 7. **Buddy-tone replies** — a personality pass on the brain's instruction
    (system prompt) so answers sound like your mate, not a customer-service
    robot.
-8. **Microsoft Store app discovery** — scan the installed Store apps list
-   (the `shell:AppsFolder` COM folder) so apps like WhatsApp and Snapchat
-   become openable. Store apps leave NO Start Menu shortcut, so today's
-   shortcut scan cannot see them.
-9. **Grammar-capable big ears** — the plain `vosk-model-en-us-0.22` ignores
+8. **Grammar-capable big ears** — the plain `vosk-model-en-us-0.22` ignores
    the wake-word word-list trick (it prints "Runtime graphs are not
    supported", so the idle ear listens with the full vocabulary and false
    wakes go up). Fix options: swap to `vosk-model-en-us-0.22-lgraph` (same
