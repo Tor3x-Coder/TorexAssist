@@ -242,6 +242,17 @@ def main():
         input("\nPress Enter to close...")
         return
 
+    # ---- Step 4.5: FIRST-RUN WIZARD ----
+    # Brand-new install (no config.ini)? Buddy introduces itself, asks
+    # your name, grades the mic, writes the settings - then restarts so
+    # everything loads the fresh name cleanly. Existing users: skipped.
+    import wizard
+    if wizard.first_run_needed():
+        wizard.run()
+        print("\nSettings saved. Restarting with your name in my memory...")
+        time.sleep(1.0)
+        os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
+
     # ---- Step 5: say hello ----
     # Small pause so the Windows sound system is fully awake first.
     # Without this, the very first greeting is sometimes silent.

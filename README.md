@@ -1,4 +1,4 @@
-# 🎙️ TorexAssist
+# 🎙️ TorexAssist — the assistant's name is **Buddy**
 
 A voice assistant for Windows 11 that:
 
@@ -27,6 +27,7 @@ No error messages when the internet dies. It just changes brain and keeps going.
 | `internet.py` | Quietly checks if you're online, in the background. |
 | `weather.py` | Fetches **real** weather (free, no API key). |
 | `setup_check.py` | **The doctor.** Tests everything and tells you what's broken. |
+| `wizard.py` | **The first-run wizard.** Asks your name out loud, grades your mic, writes config.ini. Runs once, ever. |
 | `requirements.txt` | The list of libraries to install. |
 | `run_assistant.bat` | Double-click launcher. |
 | `models/` | Where you put the Vosk model folder. |
@@ -467,10 +468,11 @@ The remaining work, in the order we agreed to do it:
 2. **Buddy-tone replies (SHIPPED)** — the brain's instruction now makes it
    talk like a close friend / little brother: casual, warm, light humour,
    teases back gently — while staying short enough to be spoken out loud.
-3. **First-run wizard** — on first launch: ask your name out loud, run a mic
-   self-test (quality gate), and write everything to `config.ini`. If the mic
-   fails the bar, recommend a cheap headset mic before continuing.
-   *(small, no download)*
+3. **First-run wizard (SHIPPED)** — on a brand-new install (no config.ini)
+   Buddy asks your name out loud, runs the mic self-test (quality gate),
+   writes config.ini from the commented example, then restarts itself.
+   Weak mic -> friendly advice to get a cheap headset, never a hard wall.
+   Existing installs are never bothered.
 4. **Grammar-capable big ears** — the plain `vosk-model-en-us-0.22` ignores
    the wake-word word-list trick ("Runtime graphs are not supported"), so the
    idle ear listens with the full vocabulary and false wakes go up. Fix:
