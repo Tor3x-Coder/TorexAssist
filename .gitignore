@@ -24,3 +24,7 @@ env/
 
 # Our own log file
 *.log
+
+# Buddy's PERMANENT MEMORY - your personal facts, stored only on
+# your own machine. This must NEVER be uploaded anywhere.
+memory.db

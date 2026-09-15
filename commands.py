@@ -563,6 +563,7 @@ KEY_VOLUME_MUTE = 0xAD
 KEY_VOLUME_DOWN = 0xAE
 KEY_VOLUME_UP = 0xAF
 KEY_MEDIA_NEXT = 0xB0
+KEY_MEDIA_PREV = 0xB1
 KEY_MEDIA_PLAY_PAUSE = 0xB3
 
 
@@ -672,6 +673,9 @@ def list_commands():
             "check battery, what is the time, what is the date, "
             "what is the weather, what am i looking at, read my clipboard, "
             "mute, volume up, volume down, "
+            "pause the music, next song, "
+            "remind me to check the oven in fifteen minutes, "
+            "remember that my car plate is abc one two three, "
             "search google for cats, play something on youtube, "
             "system info, lock the computer, shut down, restart, sleep, "
             "or just ask me anything.")
@@ -819,6 +823,40 @@ def try_command(text):
             return True, "Volume down."
         return True, "I could not control the volume on this machine."
 
+    # ---- MUSIC / MEDIA CONTROLS ----
+    # These press the REAL Windows media keys (the same ones on a
+    # keyboard with media buttons), so they work with whatever is
+    # playing: Spotify, YouTube in a browser, VLC... no setup needed.
+    # Checked before the YouTube block so "pause youtube" pauses
+    # instead of opening a new tab.
+    if ("next track" in words or "next song" in words or "skip this song" in words
+            or "skip the song" in words or "skip this track" in words
+            or words == "next song" or words == "skip"):
+        if press_media_key(KEY_MEDIA_NEXT):
+            return True, "Skipping to the next track."
+        return True, "I could not press the media keys on this machine."
+
+    if ("previous track" in words or "previous song" in words or "last song" in words
+            or "go back one song" in words or "back one song" in words):
+        if press_media_key(KEY_MEDIA_PREV):
+            return True, "Going back one track."
+        return True, "I could not press the media keys on this machine."
+
+    if "what song is this" in words or "what song is playing" in words \
+            or "which song is this" in words or "name this song" in words:
+        return True, ("I can press play, pause and skip, but I cannot see "
+                      "the song title yet. That is on my list, boss.")
+
+    if (("pause the music" in words or "pause music" in words or words == "pause"
+            or "resume the music" in words or "resume music" in words
+            or "play the music" in words or "play music" in words or words == "resume"
+            or "stop the music" in words or "stop music" in words
+            or ("play" in words and "music" in words))
+            and "youtube" not in words):
+        if press_media_key(KEY_MEDIA_PLAY_PAUSE):
+            return True, "Toggling play and pause."
+        return True, "I could not press the media keys on this machine."
+
     # ---- System info ----
     if "system info" in words or "how is my computer" in words \
             or "memory usage" in words or "cpu usage" in words:
@@ -847,6 +885,73 @@ def try_command(text):
             clip = clip[:140] + "... and it goes on."
         return True, "Your clipboard says: " + clip
 
+    # ---- TIMERS & REMINDERS (reminders.py, fully offline) ----
+    if "remind me" in words or "set a timer" in words or "set timer" in words \
+            or words.startswith("timer for") or "start a timer" in words:
+        import reminders
+        return True, reminders.set_reminder(words)
+
+    if "cancel my timer" in words or "cancel the timer" in words \
+            or words == "cancel timer" or "cancel my reminder" in words:
+        import reminders
+        return True, reminders.cancel_timer()
+
+    if "how many timers" in words or "what timers do i have" in words \
+            or "are my timers running" in words:
+        import reminders
+        return True, reminders.status()
+
+    # ---- MEMORY: storing facts (memory_store.py, local sqlite) ----
+    # "remember that john's birthday is october 5th" -> key/value pair.
+    if words.startswith("remember that ") or words.startswith("remember to ") \
+            or words.startswith("note that ") or words == "remember":
+        import memory_store
+        clause = words
+        for prefix in ("remember that", "remember to", "note that", "remember"):
+            if clause.startswith(prefix):
+                clause = clause[len(prefix):]
+                break
+        clause = " ".join(clause.split())
+        if not clause:
+            return True, "What should I remember? Say: remember that..."
+        # "my car plate is abc 123" -> key before "is", value after.
+        match = re.search(r"\b(?:is|was|are)\b", clause)
+        if match and len(clause[:match.start()].split()) <= 6:
+            key = clause[:match.start()].strip()
+            value = clause[match.end():].strip()
+        else:
+            key = value = clause
+        if memory_store.remember(key, value):
+            return True, "Got it. I will remember: " + key + "."
+        return True, "I could not save that, sorry."
+
+    if "what do you remember" in words or "what do you know about me" in words \
+            or "list my memories" in words or words == "your memories":
+        import memory_store
+        facts = memory_store.all_facts()
+        if not facts:
+            return True, ("My permanent memory is empty. Teach me something: "
+                          "say 'remember that...'")
+        shown = "; ".join(key for key, _value in facts)
+        return True, ("I am holding " + str(memory_store.count_facts()) +
+                      " facts, like: " + shown + ".")
+
+    # NOTE: "forget everything" is NOT handled here - the conversation
+    # reset block above owns it (it wipes the chat AND the facts).
+    if (words.startswith("forget ") or words.startswith("forget that ")) \
+            and "forget everything" not in words:
+        import memory_store
+        query = words
+        for prefix in ("forget that", "forget"):
+            if query.startswith(prefix):
+                query = query[len(prefix):]
+                break
+        removed = memory_store.forget(" ".join(query.split()))
+        if removed:
+            return True, "Done, I forgot: " + removed + "."
+        return True, ("I could not find a memory like that. "
+                      "Say 'what do you remember' to see my list.")
+
     # ---- Internet search ----
     if words.startswith("search google for") or words.startswith("search for") \
             or words.startswith("google "):
@@ -867,8 +972,13 @@ def try_command(text):
     if "forget everything" in words or "clear the conversation" in words \
             or "start over" in words:
         import brain
+        import memory_store
         brain.forget_everything()
-        return True, "Okay, I have forgotten our conversation."
+        deleted = memory_store.forget_everything()
+        reply = "Okay, I have forgotten our conversation"
+        if deleted:
+            reply += " and " + str(deleted) + " stored facts"
+        return True, reply + "."
 
     # ---- DANGEROUS ones (ask first) ----
     if "shut down" in words or "shutdown" in words or "power off" in words \
@@ -911,6 +1021,32 @@ def try_command(text):
         for prefix in ("open", "launch", "start", "run"):
             app_name = app_name.replace(prefix, "", 1)
         return True, open_app(app_name)
+
+    # ---- MEMORY RECALL - the LAST local stop before the AI brain ----
+    # "what is john's birthday", "do you remember my car plate"...
+    # We only answer when a stored fact is a CLEAR match; otherwise
+    # the question falls through to Gemini/Ollama untouched. Local
+    # commands above were all checked first, so "what is the time"
+    # can never be hijacked by a stored fact.
+    asked_remember = ("do you remember" in words or "did i tell you" in words
+                      or "what did i tell you" in words)
+    asked_what = (words.startswith("what is ") or words.startswith("what's ")
+                  or words.startswith("what was ") or words.startswith("whats "))
+    if asked_remember or asked_what:
+        import memory_store
+        query = words
+        for chunk in ("do you remember", "what did i tell you about",
+                      "what did i tell you", "did i tell you about",
+                      "did i tell you", "what is", "what was",
+                      "whats", "what's", "about", "again", "the", "?"):
+            query = query.replace(chunk, " ")
+        query = " ".join(query.split())
+        if query:
+            value = memory_store.recall(query)
+            if value:
+                if asked_remember:
+                    return True, "Yes, you told me: " + value + "."
+                return True, value[0].upper() + value[1:] + "."
 
     # ---- Not a command ----
     return False, ""

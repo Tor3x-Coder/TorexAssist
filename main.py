@@ -83,6 +83,10 @@ EXIT_PATTERNS = [
     re.compile(r"\b" + re.escape(phrase) + r"\b") for phrase in EXIT_WORDS
 ]
 
+# When we last warned "you have a timer running" on exit, so saying
+# "exit" a second time closes for real (see handle()).
+_exit_warned_at = None
+
 
 # ------------------------------------------------------------
 #  The greeting. Changes with the time of day, like you asked.
@@ -134,11 +138,26 @@ def handle(heard_text):
     print("You said: " + heard_text)
 
     # 1. Does the user want to quit? (Full close of the assistant.)
+    #    Safety net: timers live inside the running app, so if one is
+    #    still counting down we confirm first - closing would kill it.
+    #    Saying "exit" AGAIN within 20 seconds closes for real.
+    global _exit_warned_at
     lowered = heard_text.lower()
     for pattern in EXIT_PATTERNS:
         if pattern.search(lowered):
+            import reminders
+            running = reminders.active_count()
+            just_warned = (_exit_warned_at is not None
+                           and time.time() - _exit_warned_at < 20)
+            if running > 0 and not just_warned:
+                _exit_warned_at = time.time()
+                speaker.say("You still have " + str(running) +
+                            " timer running. Say 'exit' again if you really "
+                            "want to close me, or say 'cancel my timer' first.")
+                return True
             speaker.say("Alright " + config.USER_NAME + ", I am going offline. See you soon.")
             return False
+    _exit_warned_at = None
 
     # 2. Is it a PC command? Check this FIRST, always.
     #    Commands never go to the AI. They are instant and they work

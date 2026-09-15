@@ -26,6 +26,9 @@ No error messages when the internet dies. It just changes brain and keeps going.
 | `brain.py` | The **brain switch**. Gemini ⇄ Ollama. |
 | `internet.py` | Quietly checks if you're online, in the background. |
 | `weather.py` | Fetches **real** weather (free, no API key). |
+| `senses.py` | **The eyes.** Read-only, on-demand: active window title + clipboard. |
+| `memory_store.py` | **Long-term memory.** Your facts in a local `memory.db` (SQLite). |
+| `reminders.py` | **The alarm clock.** Timers & reminders, pure Python, fully offline. |
 | `setup_check.py` | **The doctor.** Tests everything and tells you what's broken. |
 | `wizard.py` | **The first-run wizard.** Asks your name out loud, grades your mic, writes config.ini. Runs once, ever. |
 | `requirements.txt` | The list of libraries to install. |
@@ -512,21 +515,34 @@ The remaining work, in the order we agreed to do it:
     you last copied (trimmed). Deliberately NOT background interception: a
     privacy-first assistant that secretly watches the clipboard is spyware
     with a friendly voice.
-16. **Push-to-talk hotkey** — hold a key combo (e.g. Ctrl+Alt+B) and speak,
+16. **Permanent memory (SHIPPED)** — "remember that john's birthday is
+    october 5th" stores facts in a local `memory.db` (SQLite, zero
+    downloads, git-ignored = never leaves your machine). Ask "what is
+    john's birthday" any day, any restart. Fuzzy recall, "forget X",
+    "what do you remember", and "forget everything" wipes facts + chat.
+17. **Timers & reminders (SHIPPED)** — "remind me to check the oven in
+    fifteen minutes" / "set a timer for 30 seconds": pure-Python
+    countdowns (no downloads), spoken announcement + beeps when they
+    fire, "cancel my timer", and an exit guard so closing the app
+    cannot silently kill a running timer.
+18. **Media controls (SHIPPED)** — "pause the music", "next song",
+    "previous song": presses the real Windows media keys, so it works
+    with Spotify, YouTube, VLC — whatever is playing. *(zero downloads)*
+19. **Push-to-talk hotkey** — hold a key combo (e.g. Ctrl+Alt+B) and speak,
     no wake word needed. The answer to "my mic struggles" that costs zero
     hardware. *(small)*
-17. **Screen awareness v2** — feed the window title (and later, visible text
+20. **Screen awareness v2** — feed the window title (and later, visible text
     via UI automation) into the brain so "summarize this page" works.
     *(medium)*
-18. **Focus / do-not-disturb mode** — "focus for an hour": Buddy mutes the
+21. **Focus / do-not-disturb mode** — "focus for an hour": Buddy mutes the
     system audio, answers ultra-brief, and leaves you alone. *(small-medium)*
-19. **Local file search** — "find that budget spreadsheet from last week":
+22. **Local file search** — "find that budget spreadsheet from last week":
     fuzzy search over your own file index, opens only what you confirm —
     the safety wall stays. *(medium)*
-20. **Toast notifications + tray** — Buddy shrinks to a tray icon and shoots
+23. **Toast notifications + tray** — Buddy shrinks to a tray icon and shoots
     native Windows toasts when long tasks finish (merge with item 6).
     *(small)*
-21. **Keyboard macros** — user-defined "when I say X, do this key combo"
+24. **Keyboard macros** — user-defined "when I say X, do this key combo"
     shortcuts, whitelisted like every other action. *(medium)*
 
 ---
