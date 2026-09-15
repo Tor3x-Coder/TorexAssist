@@ -26,9 +26,32 @@ _UNITS = {
     "hour": 3600, "hours": 3600, "hr": 3600, "hrs": 3600,
 }
 
-# "in 15 minutes", "for about 2 hours", "in an hour" ...
+_ONES = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+    "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
+}
+_TENS = {
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+}
+
+# Speech gives us WORDS ("fifteen minutes", "twenty five seconds"),
+# typing gives us DIGITS ("15 minutes"). Both must work.
+_NUMBER_WORDS = (
+    r"\d+|"
+    r"(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)"
+    r"(?:\s+(?:one|two|three|four|five|six|seven|eight|nine))?|"
+    r"nineteen|eighteen|seventeen|sixteen|fifteen|fourteen|thirteen|"
+    r"twelve|eleven|ten|nine|eight|seven|six|five|four|three|two|one|"
+    r"an?"
+)
+
+# "in 15 minutes", "for about 2 hours", "in an hour",
+# "in fifteen minutes", "in twenty five seconds" ...
 _TIME_RE = re.compile(
-    r"\b(?:in|for)\s+(?:about\s+)?(\d+|an?|one|two|three)\s*"
+    r"\b(?:in|for)\s+(?:about\s+)?(" + _NUMBER_WORDS + r")\s*"
     r"(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b")
 
 # Words peeled off when we figure out WHAT you want to be reminded about.
@@ -49,6 +72,22 @@ _lock = threading.Lock()
 _active = {}          # id -> {"label": ..., "timer": threading.Timer}
 
 
+def _to_number(token):
+    """'15' -> 15, 'fifteen' -> 15, 'twenty five' -> 25, 'an' -> 1."""
+    token = token.strip().lower()
+    if token.isdigit():
+        return int(token)
+    if token in ("a", "an"):
+        return 1
+    parts = token.split()
+    if len(parts) == 1:
+        number = _ONES.get(parts[0], _TENS.get(parts[0]))
+        return number
+    tens = _TENS.get(parts[0], 0)
+    ones = _ONES.get(parts[1], 0)
+    return (tens + ones) or None
+
+
 def parse_time(text):
     """
     Find "in/for <number> <unit>" in what you said.
@@ -57,15 +96,9 @@ def parse_time(text):
     match = _TIME_RE.search(text)
     if not match:
         return None, None
-    raw_number = match.group(1)
-    if raw_number in ("a", "an", "one"):
-        number = 1
-    elif raw_number == "two":
-        number = 2
-    elif raw_number == "three":
-        number = 3
-    else:
-        number = int(raw_number)
+    number = _to_number(match.group(1))
+    if not number:
+        return None, None
     seconds = number * _UNITS[match.group(2).lower()]
     remainder = (text[:match.start()] + " " + text[match.end():]).strip()
     return seconds, remainder
