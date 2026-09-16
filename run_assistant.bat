@@ -1,4 +1,4 @@
-@echo off
+    @echo off
 REM ============================================================
 REM  TorexAssist launcher - double-click this file
 REM ============================================================
